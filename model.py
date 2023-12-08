@@ -14,16 +14,7 @@ class RNN(torch.nn.Module):
             embedding_dim=rnn_config['embedding_dim'],
             padding_idx=rnn_config['num_embeddings'] - 1
         )
-
-        if rnn_config['rnn_type'] == 'LSTM':
-            self.rnn = nn.LSTM(
-                input_size=rnn_config['input_size'],
-                hidden_size=rnn_config['hidden_size'],
-                num_layers=rnn_config['num_layers'],
-                batch_first=True,
-                dropout=rnn_config['dropout']
-            )
-        elif rnn_config['rnn_type'] == 'GRU':
+        
             self.rnn = nn.GRU(
                 input_size=rnn_config['input_size'],
                 hidden_size=rnn_config['hidden_size'],
@@ -31,11 +22,7 @@ class RNN(torch.nn.Module):
                 batch_first=True,
                 dropout=rnn_config['dropout']
             )
-        else:
-            raise ValueError(
-                "rnn_type should be either 'LSTM' or 'GRU'."
-            )
-
+        
         # output does not include <sos> and <pad>, so
         # decrease the num_embeddings by 2
         self.linear = nn.Linear(
