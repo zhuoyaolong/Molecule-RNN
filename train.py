@@ -27,16 +27,16 @@ def make_vocab(config):
     
 
 def sample(model, vocab, batch_size):
-    """Sample a batch of SMILES from current model."""
+    """从当前模型 采样 a batch of SMILES ."""
     model.eval()
-    # sample
+    # 采样
     sampled_ints = model.sample(
         batch_size=batch_size,
         vocab=vocab,
         device=device
     )
 
-    # convert integers back to SMILES
+    # 整数tokens 转换为 SELFIES
     molecules = []
     sampled_ints = sampled_ints.tolist()
     for ints in sampled_ints:
@@ -48,7 +48,7 @@ def sample(model, vocab, batch_size):
                 molecule.append(vocab.int2tocken[x])
         molecules.append("".join(molecule))
 
-    # convert SELFIES back to SMILES
+    # SELFIES 转换回SMILES
     if vocab.name == 'selfies':
         molecules = [sf.decoder(x) for x in molecules]
 
@@ -114,8 +114,7 @@ if __name__ == "__main__":
     learning_rate = config['learning_rate']
     weight_decay = config['weight_decay']
 
-    # Making reduction="sum" makes huge difference
-    # in 采样分子的有效率.
+    # reduction="sum" 让输出loss求和，会让采样分子的有效率有很大区别
     loss_function = nn.CrossEntropyLoss(reduction='sum')
 
     # 创建优化器
@@ -153,10 +152,10 @@ if __name__ == "__main__":
             data = data.to(device)
             preds = model(data, lengths)
 
-            # The <sos> token 被删除 before packing, 因为
-            # 我们不需要 <sos> of output 在训练时.
-            # the image_captioning project uses the same method
-            # which directly feeds the packed sequences to
+            # 在packing之前，删除<sos> token, 因为
+            # 在训练时我们不需要输出的<sos>.
+            # the image_captioning 项目使用相同的方法
+            # 它直接把packed的序列喂给
             # 损失函数:
             # https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/03-advanced/image_captioning/train.py
             targets = pack_padded_sequence(
@@ -170,12 +169,12 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-            # accumulate loss over mini-batches
+            # 累加小批量的loss
             train_loss += loss.item()  # * data.size()[0]
 
         train_losses.append(train_loss / train_size)
 
-        print('epoch {}, train loss: {}.'.format(epoch, train_losses[-1]))
+        print('周期 {}, 训练损失: {}.'.format(epoch, train_losses[-1]))
 
         scheduler.step(train_losses[-1])
 
@@ -186,7 +185,7 @@ if __name__ == "__main__":
         num_valid, num_invalid = compute_valid_rate(sampled_molecules)
         valid_rate = num_valid / (num_valid + num_invalid)
 
-        print('valid rate: {}'.format(valid_rate))
+        print('有效率: {}'.format(valid_rate))
 
         # 更新已保存的模型，当有效率高于当前最佳有效率时
         if valid_rate >= best_valid_rate:
