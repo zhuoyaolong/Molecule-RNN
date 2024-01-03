@@ -19,21 +19,12 @@ rdBase.DisableLog('rdApp.error')
 
 
 def make_vocab(config):
-    # load vocab
+    # 加载 vocab
     which_vocab = config["which_vocab"]
     vocab_path = config["vocab_path"]
 
-    if which_vocab == "selfies":
-        return SELFIEVocab(vocab_path)
-    elif which_vocab == "regex":
-        return RegExVocab(vocab_path)
-    elif which_vocab == "char":
-        return CharVocab(vocab_path)
-    else:
-        raise ValueError(
-            "Wrong vacab name for configuration which_vocab!"
-        )
-
+    return SELFIEVocab(vocab_path)
+    
 
 def sample(model, vocab, batch_size):
     """Sample a batch of SMILES from current model."""
@@ -124,24 +115,14 @@ if __name__ == "__main__":
     weight_decay = config['weight_decay']
 
     # Making reduction="sum" makes huge difference
-    # in valid rate of sampled molecules.
+    # in 采样分子的有效率.
     loss_function = nn.CrossEntropyLoss(reduction='sum')
 
     # 创建优化器
-    if config['which_optimizer'] == "adam":
-        optimizer = torch.optim.Adam(
-            model.parameters(), lr=learning_rate,
-            weight_decay=weight_decay, amsgrad=True
-        )
-    elif config['which_optimizer'] == "sgd":
-        optimizer = torch.optim.SGD(
-            model.parameters(), lr=learning_rate,
-            weight_decay=weight_decay, momentum=0.9
-        )
-    else:
-        raise ValueError(
-            "Wrong optimizer! Select between 'adam' and 'sgd'."
-        )
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=learning_rate,
+        weight_decay=weight_decay, amsgrad=True
+    )
 
     # 学习率 scheduler
     scheduler = ReduceLROnPlateau(
@@ -151,7 +132,7 @@ if __name__ == "__main__":
         verbose=True
     )
 
-    # vocabulary object used by the sample() function
+    # sample() 函数使用的词汇对象
     vocab = make_vocab(config)
 
     # 训练和验证, 结果会被保存.
@@ -164,9 +145,8 @@ if __name__ == "__main__":
         model.train()
         train_loss = 0
         for data, lengths in tqdm(dataloader):
-            # 长度 are decreased by 1 because we don't
-            # use <eos> for input and we don't need <sos> for
-            # output during traning.
+            # 长度-1，是因为我们在训练时，输入时不用<eos>，输出不需要<sos>
+            
             lengths = [length - 1 for length in lengths]
 
             optimizer.zero_grad()
@@ -177,7 +157,7 @@ if __name__ == "__main__":
             # 我们不需要 <sos> of output 在训练时.
             # the image_captioning project uses the same method
             # which directly feeds the packed sequences to
-            # the loss function:
+            # 损失函数:
             # https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/03-advanced/image_captioning/train.py
             targets = pack_padded_sequence(
                 data[:, 1:],
