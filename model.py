@@ -15,13 +15,13 @@ class RNN(torch.nn.Module):
             padding_idx=rnn_config['num_embeddings'] - 1
         )
         
-            self.rnn = nn.GRU(
-                input_size=rnn_config['input_size'],
-                hidden_size=rnn_config['hidden_size'],
-                num_layers=rnn_config['num_layers'],
-                batch_first=True,
-                dropout=rnn_config['dropout']
-            )
+        self.rnn = nn.GRU(
+            input_size=rnn_config['input_size'],
+            hidden_size=rnn_config['hidden_size'],
+            num_layers=rnn_config['num_layers'],
+            batch_first=True,
+            dropout=rnn_config['dropout']
+        )
         
         # output does not include <sos> and <pad>, so
         # decrease the num_embeddings by 2
