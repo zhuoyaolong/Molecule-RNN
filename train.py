@@ -65,8 +65,7 @@ def sample(model, vocab, batch_size):
 
 
 def compute_valid_rate(molecules):
-    """compute the percentage of valid SMILES given
-    a list SMILES strings"""
+    """计算有效 SMILES 的百分比 给定一个SMILES字符串的列表"""
     num_valid, num_invalid = 0, 0
     for mol in molecules:
         mol = Chem.MolFromSmiles(mol)
@@ -79,7 +78,7 @@ def compute_valid_rate(molecules):
 
 
 if __name__ == "__main__":
-    # detect cpu or gpu
+    # 选择 cpu / gpu
     device = torch.device(
         'cuda' if torch.cuda.is_available() else 'cpu'
     )
@@ -89,36 +88,36 @@ if __name__ == "__main__":
     with open(config_dir, 'r') as f:
         config = yaml.full_load(f)
 
-    # directory for results
+    # 输出结果的目录
     out_dir = config['out_dir']
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     trained_model_dir = out_dir + 'trained_model.pt'
 
-    # save the configuration file for future reference
+    # 保存配置文件，以待未来使用
     with open(out_dir + 'config.yaml', 'w') as f:
         yaml.dump(config, f)
 
-    # training data
+    # 训练数据
     dataset_dir = config['dataset_dir']
     which_vocab = config['which_vocab']
     vocab_path = config['vocab_path']
     percentage = config['percentage']
 
-    # create dataloader
+    # 创建 dataloader
     batch_size = config['batch_size']
     shuffle = config['shuffle']
     PADDING_IDX = config['rnn_config']['num_embeddings'] - 1
     num_workers = os.cpu_count()
-    print('number of workers to load data: ', num_workers)
-    print('which vocabulary to use: ', which_vocab)
+    print('加载数据的CPU核心个数: ', num_workers)
+    print('使用的词汇表: ', which_vocab)
     dataloader, train_size = dataloader_gen(
         dataset_dir, percentage, which_vocab,
         vocab_path, batch_size, PADDING_IDX,
         shuffle, drop_last=False
     )
 
-    # model and training configuration
+    # 模型和训练参数配置
     rnn_config = config['rnn_config']
     model = RNN(rnn_config).to(device)
     learning_rate = config['learning_rate']
@@ -128,7 +127,7 @@ if __name__ == "__main__":
     # in valid rate of sampled molecules.
     loss_function = nn.CrossEntropyLoss(reduction='sum')
 
-    # create optimizer
+    # 创建优化器
     if config['which_optimizer'] == "adam":
         optimizer = torch.optim.Adam(
             model.parameters(), lr=learning_rate,
@@ -144,7 +143,7 @@ if __name__ == "__main__":
             "Wrong optimizer! Select between 'adam' and 'sgd'."
         )
 
-    # learning rate scheduler
+    # 学习率 scheduler
     scheduler = ReduceLROnPlateau(
         optimizer, mode='min',
         factor=0.5, patience=5,
@@ -155,17 +154,17 @@ if __name__ == "__main__":
     # vocabulary object used by the sample() function
     vocab = make_vocab(config)
 
-    # train and validation, the results are saved.
+    # 训练和验证, 结果会被保存.
     train_losses = []
     best_valid_rate = 0
     num_epoch = config['num_epoch']
 
-    print('begin training...')
+    print('开始训练...')
     for epoch in range(1, 1 + num_epoch):
         model.train()
         train_loss = 0
         for data, lengths in tqdm(dataloader):
-            # the lengths are decreased by 1 because we don't
+            # 长度 are decreased by 1 because we don't
             # use <eos> for input and we don't need <sos> for
             # output during traning.
             lengths = [length - 1 for length in lengths]
@@ -174,8 +173,8 @@ if __name__ == "__main__":
             data = data.to(device)
             preds = model(data, lengths)
 
-            # The <sos> token is removed before packing, because
-            # we don't need <sos> of output during training.
+            # The <sos> token 被删除 before packing, 因为
+            # 我们不需要 <sos> of output 在训练时.
             # the image_captioning project uses the same method
             # which directly feeds the packed sequences to
             # the loss function:
@@ -200,21 +199,21 @@ if __name__ == "__main__":
 
         scheduler.step(train_losses[-1])
 
-        # sample 1024 SMILES each epoch
+        # 每个周期采样1024个SMILE
         sampled_molecules = sample(model, vocab, batch_size=1024)
 
-        # print the valid rate each epoch
+        # 每个周期输出有效率(valid_rate)
         num_valid, num_invalid = compute_valid_rate(sampled_molecules)
         valid_rate = num_valid / (num_valid + num_invalid)
 
         print('valid rate: {}'.format(valid_rate))
 
-        # update the saved model upon best validation loss
+        # 更新已保存的模型，当有效率高于当前最佳有效率时
         if valid_rate >= best_valid_rate:
             best_valid_rate = valid_rate
             print('model saved at epoch {}'.format(epoch))
             torch.save(model.state_dict(), trained_model_dir)
 
-    # save train and validation losses
+    # 保存训练和验证的损失
     with open(out_dir + 'loss.yaml', 'w') as f:
         yaml.dump(train_losses, f)
